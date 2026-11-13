@@ -1,0 +1,16 @@
+{
+  "name": "mosswatch",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 4230 --strictPort",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4231 --strictPort",
+    "test": "node --test tests/*.test.js",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": { "gyosjs": "0.5.5" },
+  "devDependencies": { "vite": "6.4.6", "@playwright/test": "1.55.1" }
+}
