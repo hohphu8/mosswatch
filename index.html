@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#203d33">
+  <meta name="description" content="Mosswatch — Trạm Rêu. Xây tháp, giữ khu rừng qua năm đợt địch. Một game phòng thủ nhỏ bằng Canvas và GyosJS.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws://127.0.0.1:*; object-src 'none'; base-uri 'self'">
+  <title>Mosswatch — Trạm Rêu</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+</head>
+<body>
+<div g-scope="Mosswatch" g-cloak>
+  <div g-ref="root" class="shell">
+    <header class="masthead">
+      <a href="/" class="brand" aria-label="Mosswatch — trang đầu"><img src="/favicon.svg" width="36" height="36" alt=""><span>mosswatch<span class="brand-dot">.</span></span></a>
+      <span class="masthead-note">MỘT CA TRỰC GIỮA KHU RỪNG</span>
+      <button class="text-button" @click="help($event)"><span class="question-mark" aria-hidden="true">?</span> Cách chơi</button>
+    </header>
+    <main>
+      <section class="intro">
+        <div><p class="eyebrow"><span class="status-dot"></span> TRẠM RÊU · TUYẾN PHÒNG THỦ 01</p><h1>Giữ lại một đốm sáng.</h1><p class="intro-text">Bầy than đang tới. Dựng tháp, giữ lối mòn, bảo vệ Hạt sáng.</p></div>
+        <div class="session-tag"><span aria-hidden="true">◈</span><div><strong>Một khu rừng. Năm đợt địch.</strong><small>Mỗi vị trí đều có thể tạo khác biệt.</small></div></div>
+      </section>
+      <section class="game-layout" aria-label="Trận phòng thủ">
+        <div class="battle-column">
+          <div class="hud" aria-label="Tình hình trận">
+            <div class="hud-item"><span class="hud-icon seed" aria-hidden="true">✦</span><div><span class="hud-label">HẠT ĐỂ XÂY</span><strong data-testid="money">{state().money}</strong></div></div>
+            <div class="hud-item"><span class="hud-icon heart" aria-hidden="true">♡</span><div><span class="hud-label">HẠT SÁNG</span><strong><span data-testid="health">{state().health}</span><small> / 20</small></strong></div></div>
+            <div class="hud-item"><span class="hud-icon wave" aria-hidden="true">≋</span><div><span class="hud-label">ĐỢT ĐỊCH</span><strong data-testid="wave">{waveLabel()}</strong></div></div>
+            <div class="hud-status"><span class="status-dot" :class="state().status === 'running' ? 'active' : ''"></span><span data-testid="status">{statusText()}</span></div>
+          </div>
+          <div class="map-frame">
+            <div class="map-label"><span>01</span> THUNG LŨNG RÊU</div>
+            <canvas g-ref="canvas" width="840" height="540" aria-label="Bản đồ phòng thủ với 12 ô xây tháp" aria-describedby="map-hint">Dùng danh sách ô bên dưới để chọn vị trí xây tháp.</canvas>
+            <div class="pause-banner" g-show="state().status === 'paused'"><span aria-hidden="true">Ⅱ</span> Đã tạm dừng · vẫn có thể xây và nâng cấp</div>
+            <div class="map-overlay result-overlay" g-show="terminal()">
+              <span class="result-symbol" aria-hidden="true">{state().status === 'won' ? '✧' : '◇'}</span>
+              <p class="eyebrow">{state().status === 'won' ? 'BÌNH MINH ĐÃ TỚI' : 'CA TRỰC KHÉP LẠI'}</p>
+              <h2>{state().status === 'won' ? 'Khu rừng vẫn sáng.' : 'Thử một cách bố trí khác.'}</h2>
+              <p>Hạ {state().kills} địch · {state().leaked} địch lọt qua · còn {state().health} sức sống.</p>
+              <button class="primary" @click="askRestart($event)">Bắt đầu ca trực mới <span aria-hidden="true">↻</span></button>
+            </div>
+          </div>
+          <div class="map-footer"><p id="map-hint"><span aria-hidden="true">⊕</span> Chạm ô <b>+</b> để chọn vị trí, rồi chọn tháp và xây.</p><span>12 Ô XÂY · ĐƯỜNG ĐI CỐ ĐỊNH</span></div>
+          <div class="battle-controls">
+            <div class="next-wave"><span class="eyebrow">{state().status === 'ready' ? 'ĐỢT SẮP TỚI' : 'TRÊN LỐI MÒN'}</span><strong>{waveInfo().name}</strong><small g-show="state().status === 'ready'">{waveInfo().note}</small><small g-show="state().status !== 'ready'">Còn {state().remaining} địch trong đợt · Đã hạ {state().kills}</small></div>
+            <button class="primary start-button" @click="startWave()" g-show="state().status === 'ready'" :disabled="fatal()">Gọi đợt {state().wave + 1} <span aria-hidden="true">→</span></button>
+            <button class="pause-button" @click="togglePause()" g-show="state().status === 'running' || state().status === 'paused'" :disabled="fatal()">{pauseLabel()}</button>
+          </div>
+          <div class="utility-row"><div class="speeds" role="group" aria-label="Tốc độ trận"><span>Tốc độ</span><button @click="setSpeed(1)" :aria-pressed="speed() === 1">1×</button><button @click="setSpeed(2)" :aria-pressed="speed() === 2">2×</button><button @click="setSpeed(3)" :aria-pressed="speed() === 3">3×</button></div><button class="text-button restart" @click="askRestart($event)"><span aria-hidden="true">↻</span> Chơi lại</button></div>
+          <p class="pause-note" g-show="pauseReason()">{pauseReason()}</p>
+          <p class="error" role="alert" g-show="error()">{error()}</p>
+          <p class="notice" role="status" aria-live="polite">{notice()}</p>
+          <details class="pad-picker"><summary>Chọn ô bằng bàn phím <span>12 vị trí</span></summary><div class="pad-buttons"><button *for="pad in pads()" g-key="pad.id" @click="select(pad.id)" :aria-label="pad.label" :aria-pressed="selected() === pad.id" :class="pad.occupied ? 'occupied' : ''">{pad.id + 1}</button></div><p>Tab để chọn ô · Enter để xác nhận · P để tạm dừng · Esc bỏ chọn.</p></details>
+        </div>
+        <aside class="workbench" :class="selected() !== null ? 'editing' : ''" aria-label="Xây dựng và nâng cấp">
+          <div class="workbench-heading"><div><p class="eyebrow">NHỮNG NGƯỜI GIỮ RỪNG</p><h2>Chọn tháp của bạn</h2></div><span aria-hidden="true" class="workbench-symbol">↟</span><button class="close-tray" @click="clearSelection()" aria-label="Đóng bảng tháp">×</button></div>
+          <div class="tower-cards" role="group" aria-label="Loại tháp">
+            <button *for="card in cards" g-key="card.id" class="tower-card" :class="card.id" @click="choose(card.id)" :aria-pressed="build() === card.id" :aria-label="card.name">
+              <span class="tower-icon" aria-hidden="true">{card.id === 'arrow' ? '➶' : card.id === 'cannon' ? '✹' : '❄'}</span><span class="tower-copy"><strong>{card.name}</strong><small>{card.role}</small></span><span class="tower-price">{card.cost}<small>hạt</small></span>
+            </button>
+          </div>
+          <div class="selection-card">
+            <div class="selection-top"><span class="eyebrow">VỊ TRÍ ĐANG CHỌN</span><span class="selection-mark" aria-hidden="true">⌖</span></div>
+            <h3 data-testid="selection">{selectedTitle()}</h3>
+            <p class="selection-description" g-show="selected() === null">Các ô tròn có dấu + là nơi bạn có thể xây. Bắt đầu gần một khúc cua để tháp có nhiều thời gian tấn công.</p>
+            <div g-show="selected() !== null">
+              <p class="selection-description">{stats().detail}</p>
+              <div class="tower-stats"><div><span>Sát thương</span><strong>{stats().damage}</strong></div><div><span>Tầm bắn</span><strong>{stats().range}</strong></div><div><span>Mỗi phát</span><strong>{stats().interval.toFixed(2)}s</strong></div></div>
+              <button class="primary build-button" g-show="!selectedTower()" @click="place()" :disabled="!canBuild()">Xây tháp · {stats().cost} hạt</button>
+              <div g-show="selectedTower()"><button class="primary upgrade-button" @click="upgrade()" :disabled="!canUpgrade()">{upgradeLabel()}</button><button class="sell-button" @click="sell()" :disabled="terminal() || fatal()">Bán tháp · nhận {refund()} hạt</button></div>
+              <p class="shortfall" g-show="!selectedTower() &amp;&amp; state().money &lt; stats().cost">Chưa đủ hạt. Hạ địch hoặc bán một tháp để có thêm.</p>
+            </div>
+          </div>
+          <div class="field-note"><span aria-hidden="true">✧</span><div><strong>Một chút sương, một chút lửa.</strong><p>Tháp Sương giữ chân địch. Pháo Hạt tận dụng bầy đông. Nỏ xử lý những kẻ đi lẻ.</p></div></div>
+          <div class="enemy-legend"><p class="eyebrow">NHẬN DIỆN TRÊN LỐI MÒN</p><div><span class="enemy-dot ember"></span><span>Bọ than</span><small>Cân bằng</small></div><div><span class="enemy-dot swift"></span><span>Cánh lửa</span><small>Nhanh, ít máu</small></div><div><span class="enemy-dot shell-enemy"></span><span>Giáp đá</span><small>Chậm, có giáp</small></div></div>
+        </aside>
+      </section>
+    </main>
+    <footer><span>mosswatch <i>/</i> Một khu rừng nhỏ, một ca trực của bạn.</span><span>Không lưu trận khi tải lại trang <i>·</i> Built with GyosJS</span></footer>
+    <dialog g-ref="dialog" aria-labelledby="dialog-title">
+      <button class="dialog-close" @click="close()" aria-label="Đóng">×</button>
+      <p class="eyebrow">MOSSWATCH · TRẠM RÊU</p>
+      <h2 id="dialog-title">{modal() === 'restart' ? 'Bắt đầu ca trực mới?' : 'Giữ lối mòn. Giữ Hạt sáng.'}</h2>
+      <div g-show="modal() === 'restart'"><p>Trận hiện tại sẽ kết thúc, mọi tháp và hạt được đặt lại. Game chưa lưu tiến độ sau khi tải lại trang.</p><div class="dialog-actions"><button class="secondary" @click="close()">Giữ trận này</button><button class="primary" @click="restart()">Bắt đầu lại</button></div></div>
+      <div g-show="modal() === 'help'">
+        <ol class="help-steps"><li><strong>Chọn ô, chọn tháp, rồi xây.</strong> Bạn có 180 hạt. Tháp chỉ được xây trên 12 ô tròn; đường đi của địch không đổi.</li><li><strong>Gọi đợt khi sẵn sàng.</strong> Vượt qua 5 đợt và giữ sức sống trên 0 để thắng. Bọ than và Cánh lửa lọt qua mất 1 sức sống; Giáp đá mất 3.</li><li><strong>Hạ địch để kiếm hạt.</strong> Nâng tháp tối đa cấp 3. Bán nhận lại 70% tổng tiền đã đầu tư. Mỗi đợt hoàn thành có thưởng hạt.</li><li><strong>Kết hợp ba loại tháp.</strong> Pháo nổ trong vùng, Sương làm chậm 45% trong 1,6 giây. Giáp đá nhận 72% sát thương từ mọi tháp.</li></ol>
+        <p class="help-note">P: pause/tiếp tục · Esc: bỏ chọn hoặc đóng bảng · Nút chọn ô bên dưới bản đồ hỗ trợ bàn phím. Bạn vẫn xây/nâng cấp được khi pause. Chuyển tab sẽ tự pause; quay lại nhấn Tiếp tục. Đóng bảng này không tự chạy tiếp trận.</p>
+        <button class="primary" @click="close()">Đã hiểu, vào rừng thôi →</button>
+      </div>
+    </dialog>
+  </div>
+</div>
+<noscript>Hãy bật JavaScript để chơi Mosswatch.</noscript>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
