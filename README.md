@@ -1,6 +1,8 @@
 # Mosswatch — Trạm Rêu
 
-A Vietnamese Canvas tower-defense mini-game built with published **GyosJS 0.5.5** and plain JavaScript. Protect the forest beacon through five authored waves. No account, backend, telemetry, remote assets or sound.
+A Vietnamese Canvas tower-defense mini-game built with published **GyosJS 0.5.6** and plain JavaScript. Protect the forest beacon through five authored waves. No account, backend, telemetry, remote assets or sound.
+
+See the [0.5.6 runtime rollout](docs/RUNTIME-0.5.6.md) for the latest package-upgrade validation.
 
 ## Play locally
 
